@@ -89,8 +89,18 @@ jobs:
           SSH_KEY: ${{ secrets.SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
-          test -n "$SSH_KEY"
-          test -n "$KNOWN_HOSTS"
+          missing=0
+          if [[ -z "${SSH_KEY//[[:space:]]/}" ]]; then
+            echo '::error::Missing Actions secret SSH_KEY. Set it in repository Secrets or the production environment Secrets.'
+            missing=1
+          fi
+          if [[ -z "${KNOWN_HOSTS//[[:space:]]/}" ]]; then
+            echo '::error::Missing Actions secret VPS_KNOWN_HOSTS. Set it in repository Secrets or the production environment Secrets.'
+            missing=1
+          fi
+          if [[ "$missing" == 1 ]]; then
+            exit 1
+          fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
