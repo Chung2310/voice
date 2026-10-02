@@ -55,10 +55,10 @@ Trong tab **Secrets**, thêm secrets SSH:
 
 | Secret | Nội dung |
 | --- | --- |
-| VPS_HOST | IP hoặc hostname VPS (IPv4/DNS) |
-| VPS_USER | User SSH đã chuẩn bị |
-| VPS_PORT | Port SSH, mặc định 22 |
-| VPS_SSH_KEY | Nội dung private key SSH của tài khoản deploy |
+| SSH_HOST | IP hoặc hostname VPS (IPv4/DNS) |
+| SSH_USER | User SSH đã chuẩn bị |
+| SSH_PORT | Port SSH, mặc định 22 |
+| SSH_KEY | Nội dung private key SSH của tài khoản deploy |
 | VPS_KNOWN_HOSTS | Dòng host key SSH đã xác minh của VPS |
 
 Thêm public key tương ứng vào `~/.ssh/authorized_keys` trên VPS. Lấy host key bằng `ssh-keyscan -p 22 HOST` và đối chiếu fingerprint qua console của nhà cung cấp VPS trước khi lưu. Port khác 22 dùng dạng `[HOST]:PORT`. Workflow bật kiểm tra host key, không tự tin tưởng kết quả quét mạng.

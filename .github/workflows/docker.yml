@@ -86,7 +86,7 @@ jobs:
           docker compose --env-file .env -f docker/docker-compose.prod.yml config --quiet
       - name: Configure SSH
         env:
-          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
           test -n "$SSH_KEY"
@@ -97,22 +97,22 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
       - name: Deploy and wait for health
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
           IMAGE_NAME: ${{ needs.image.outputs.image }}
           IMAGE_TAG: ${{ needs.image.outputs.tag }}
         shell: bash
         run: |
-          [[ "$VPS_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
-          [[ "$VPS_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
-          [[ "$VPS_PORT" =~ ^[0-9]+$ ]]
-          ssh_args=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -p "$VPS_PORT")
+          [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
+          [[ "$SSH_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
+          [[ "$SSH_PORT" =~ ^[0-9]+$ ]]
+          ssh_args=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -p "$SSH_PORT")
           release="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          ssh "${ssh_args[@]}" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p ~/vieneu-tts/releases/$release"
-          scp -o BatchMode=yes -o StrictHostKeyChecking=yes -P "$VPS_PORT" docker/docker-compose.prod.yml "$VPS_USER@$VPS_HOST:vieneu-tts/releases/$release/compose.yml"
-          scp -p -o BatchMode=yes -o StrictHostKeyChecking=yes -P "$VPS_PORT" .env "$VPS_USER@$VPS_HOST:vieneu-tts/releases/$release/.env"
-          ssh "${ssh_args[@]}" "$VPS_USER@$VPS_HOST" "bash -s -- '$release' '$IMAGE_NAME' '$IMAGE_TAG'" < docker/deploy.sh
+          ssh "${ssh_args[@]}" "$SSH_USER@$SSH_HOST" "umask 077; mkdir -p ~/vieneu-tts/releases/$release"
+          scp -o BatchMode=yes -o StrictHostKeyChecking=yes -P "$SSH_PORT" docker/docker-compose.prod.yml "$SSH_USER@$SSH_HOST:vieneu-tts/releases/$release/compose.yml"
+          scp -p -o BatchMode=yes -o StrictHostKeyChecking=yes -P "$SSH_PORT" .env "$SSH_USER@$SSH_HOST:vieneu-tts/releases/$release/.env"
+          ssh "${ssh_args[@]}" "$SSH_USER@$SSH_HOST" "bash -s -- '$release' '$IMAGE_NAME' '$IMAGE_TAG'" < docker/deploy.sh
       - name: Remove runner deployment credentials
         if: always()
         run: rm -f .env ~/.ssh/id_ed25519 ~/.ssh/known_hosts
