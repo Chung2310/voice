@@ -59,9 +59,8 @@ Trong tab **Secrets**, thêm secrets SSH:
 | SSH_USER | User SSH đã chuẩn bị |
 | SSH_PORT | Port SSH, mặc định 22 |
 | SSH_KEY | Nội dung private key SSH của tài khoản deploy |
-| VPS_KNOWN_HOSTS | Dòng host key SSH đã xác minh của VPS |
 
-Thêm public key tương ứng vào `~/.ssh/authorized_keys` trên VPS. Lấy host key bằng `ssh-keyscan -p 22 HOST` và đối chiếu fingerprint qua console của nhà cung cấp VPS trước khi lưu. Port khác 22 dùng dạng `[HOST]:PORT`. Workflow bật kiểm tra host key, không tự tin tưởng kết quả quét mạng.
+Thêm public key tương ứng vào `~/.ssh/authorized_keys` trên VPS. Workflow chỉ cần bốn secrets SSH ở trên và dùng `StrictHostKeyChecking=accept-new`: tự ghi nhận host key trong lần kết nối đầu trên runner, sau đó từ chối nếu key thay đổi trong cùng job. Mỗi runner mới ghi nhận lại host key; danh tính VPS ở lần kết nối đầu không được xác minh độc lập.
 
 Tạo GitHub Environment tên `production` (có thể giới hạn nhánh develop). Secrets có thể để ở repository hoặc environment production. Tạo **repository variable** `VPS_DEPLOY_ENABLED=true` sau khi VPS và secrets đã sẵn sàng; nếu chưa bật, CI vẫn build/publish nhưng bỏ qua SSH deploy.
 

@@ -87,23 +87,14 @@ jobs:
       - name: Configure SSH
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
-          missing=0
           if [[ -z "${SSH_KEY//[[:space:]]/}" ]]; then
             echo '::error::Missing Actions secret SSH_KEY. Set it in repository Secrets or the production environment Secrets.'
-            missing=1
-          fi
-          if [[ -z "${KNOWN_HOSTS//[[:space:]]/}" ]]; then
-            echo '::error::Missing Actions secret VPS_KNOWN_HOSTS. Set it in repository Secrets or the production environment Secrets.'
-            missing=1
-          fi
-          if [[ "$missing" == 1 ]]; then
             exit 1
           fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          touch ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
       - name: Deploy and wait for health
         env:
@@ -117,11 +108,11 @@ jobs:
           [[ "$SSH_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]]
           [[ "$SSH_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
           [[ "$SSH_PORT" =~ ^[0-9]+$ ]]
-          ssh_args=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 -p "$SSH_PORT")
+          ssh_args=(-o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -p "$SSH_PORT")
           release="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           ssh "${ssh_args[@]}" "$SSH_USER@$SSH_HOST" "umask 077; mkdir -p ~/vieneu-tts/releases/$release"
-          scp -o BatchMode=yes -o StrictHostKeyChecking=yes -P "$SSH_PORT" docker/docker-compose.prod.yml "$SSH_USER@$SSH_HOST:vieneu-tts/releases/$release/compose.yml"
-          scp -p -o BatchMode=yes -o StrictHostKeyChecking=yes -P "$SSH_PORT" .env "$SSH_USER@$SSH_HOST:vieneu-tts/releases/$release/.env"
+          scp -o BatchMode=yes -o StrictHostKeyChecking=accept-new -P "$SSH_PORT" docker/docker-compose.prod.yml "$SSH_USER@$SSH_HOST:vieneu-tts/releases/$release/compose.yml"
+          scp -p -o BatchMode=yes -o StrictHostKeyChecking=accept-new -P "$SSH_PORT" .env "$SSH_USER@$SSH_HOST:vieneu-tts/releases/$release/.env"
           ssh "${ssh_args[@]}" "$SSH_USER@$SSH_HOST" "bash -s -- '$release' '$IMAGE_NAME' '$IMAGE_TAG'" < docker/deploy.sh
       - name: Remove runner deployment credentials
         if: always()
