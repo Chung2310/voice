@@ -358,6 +358,9 @@ Tham số: `steps` (số bước Euler, mặc định 16; 8 nhanh gấp ~2, hơi
 
 ## 🐳 3. API Server & Docker <a name="docker-remote"></a>
 
+Triển khai VPS CPU bằng GitHub Actions + GHCR + SSH: [Hướng dẫn triển khai](docs/deploy-vps.vi.md).
+
+
 ### API streaming — chuẩn OpenAI (v3 Turbo, CPU hoặc GPU)
 
 `apps/openai_speech.py` phục vụ `POST /v1/audio/speech` giống hệt endpoint TTS của OpenAI (`pcm`/`wav`, body chunked hoặc SSE), nên **OpenAI SDK, Pipecat, LiveKit Agents, Vercel AI SDK, …** dùng được chỉ bằng đổi `base_url`. Audio phát ra ngay khi sinh: chunk đầu **~115 ms**, **16 luồng đồng thời** trên RTX 3060 (continuous batching); trên CPU ~140–300 ms và 1–2 luồng.

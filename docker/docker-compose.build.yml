@@ -1,15 +1,7 @@
 services:
-  # ========================================================
-  # GPU Builder
-  # ========================================================
-  gpu:
-    image: ${IMAGE_NAME}:${IMAGE_TAG}
-    env_file:
-      - .env
+  cpu:
+    image: ${IMAGE_NAME:-vieneu-tts}:${IMAGE_TAG:-cpu}
     build:
-      context: .
-      dockerfile: docker/Dockerfile.gpu
+      context: ..
+      dockerfile: docker/Dockerfile.cpu
       target: prod
-
-# Không định nghĩa volumes, ports ở đây
-# File này chỉ dùng để: docker compose -f docker-compose.build.yml build

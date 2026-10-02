@@ -1,62 +1,69 @@
-services:
-  # ========================================================
-  # GPU Production Service
-  # ========================================================
-  gpu:
-    restart: unless-stopped
-    profiles: ["gpu"]
-    image: ${IMAGE_NAME}:${IMAGE_TAG}
-    container_name: vieneu-tts-gpu
-    ports:
-      - "${PORT}:7860"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    volumes:
-      - huggingface_cache:/root/.cache/huggingface
-      - ./output_audio:/workspace/output_audio
-    env_file:
-      - .env
+# CPU production. Pass --env-file explicitly; see docs/deploy-vps.vi.md.
+name: vieneu-tts
 
-  # ========================================================
-  # GPU Production — OpenAI-compatible streaming API (same image, other command)
-  #   docker compose -f docker/docker-compose.prod.yml --profile api up
-  # ========================================================
-  api:
-    restart: unless-stopped
-    profiles: ["api"]
-    image: ${IMAGE_NAME}:${IMAGE_TAG}
-    container_name: vieneu-tts-api
-    command: ["python", "-m", "apps.openai_speech"]
+x-runtime: &runtime
+  image: ${IMAGE_NAME:-vieneu-tts}:${IMAGE_TAG:-cpu}
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 60s
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  volumes:
+    - huggingface_cache:/home/app/.cache/huggingface
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-environment: &environment
+  HF_HOME: /home/app/.cache/huggingface
+  HF_TOKEN: ${HF_TOKEN:-}
+  VIENEU_BACKEND: onnx
+  VIENEU_DEVICE: cpu
+  VIENEU_PRECISION: ${VIENEU_PRECISION:-fp32}
+
+services:
+  web:
+    <<: *runtime
+    profiles: [web]
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-7860}:7860"
     environment:
-      - HOST=0.0.0.0   # the server defaults to loopback; the published port needs all interfaces
-      - PORT=8000
-      - VIENEU_MAX_STREAMS=${VIENEU_MAX_STREAMS:-16}
-      - VIENEU_QUEUE=${VIENEU_QUEUE:-16}
-      - VIENEU_API_KEY=${VIENEU_API_KEY:-}
+      <<: *environment
+      GRADIO_SERVER_NAME: 0.0.0.0
+      GRADIO_SERVER_PORT: "7860"
+      GRADIO_SHARE: "0"
+      VIENEU_WEB_AUTH: ${VIENEU_WEB_AUTH:-}
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
-      interval: 15s
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/', timeout=3)"]
+      interval: 30s
       timeout: 5s
       start_period: 120s
       retries: 3
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    volumes:
-      - huggingface_cache:/root/.cache/huggingface
-    env_file:
-      - .env
+
+  api:
+    <<: *runtime
+    profiles: [api]
+    command: [python, -m, apps.openai_speech]
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
+    environment:
+      <<: *environment
+      HOST: 0.0.0.0
+      PORT: "8000"
+      VIENEU_MAX_STREAMS: ${VIENEU_MAX_STREAMS:-1}
+      VIENEU_QUEUE: ${VIENEU_QUEUE:-4}
+      VIENEU_QUEUE_TIMEOUT: ${VIENEU_QUEUE_TIMEOUT:-10}
+      VIENEU_API_KEY: ${VIENEU_API_KEY:-}
+      VIENEU_WATERMARK: "0"
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 600s
+      retries: 5
 
 volumes:
   huggingface_cache:
